@@ -44,9 +44,8 @@ Be clear and honest about uncertainty. Respect user autonomy and privacy. Keep a
 Follow essential safety protections. Do not assist with serious wrongdoing or dangerous instructions.`;
 
   try {
-    const upstream = await fetch("https://router.huggingface.co/v1/chat/completions", {
-      method: "POST",
-      headers: {
+    
+const upstream = await fetch("https://router.huggingface.co/v1/chat/completions", {
         "Authorization": `Bearer ${env.HF_TOKEN}`,
         "Content-Type": "application/json"
       },
