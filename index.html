@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17152e">
+  <title>Nexa AI — Hablemos</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10101e;--panel:#19192c;--panel2:#22223a;--text:#f7f5ff;--muted:#b8b4d2;--accent:#a99aff;--line:#393653}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#28234b 0,#10101e 48%);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);min-height:100vh}
+    .app{max-width:850px;margin:auto;min-height:100vh;display:flex;flex-direction:column;padding:16px}
+    header{display:flex;align-items:center;gap:12px;padding:8px 0 18px;border-bottom:1px solid var(--line)}
+    .logo{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#8e7bff,#5a4db3);display:grid;place-items:center;font-size:24px;box-shadow:0 8px 28px #7764ff44}
+    h1{font-size:20px;margin:0} .sub{font-size:12px;color:var(--muted);margin-top:3px}
+    .lang{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:9px;border-radius:12px;max-width:135px}
+    .welcome{text-align:center;padding:34px 12px 20px}.orb{width:70px;height:70px;margin:0 auto 14px;border-radius:25px;display:grid;place-items:center;background:linear-gradient(135deg,#b9aaff,#5e50bc);font-size:34px}
+    .welcome h2{margin:0 0 8px;font-size:25px}.welcome p{color:var(--muted);margin:0 auto;max-width:480px;line-height:1.5}
+    .messages{flex:1;display:flex;flex-direction:column;gap:14px;padding:10px 0 20px}
+    .msg{max-width:88%;padding:13px 15px;border-radius:18px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+    .assistant{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-top-left-radius:5px}
+    .user{align-self:flex-end;background:#51458f;border-top-right-radius:5px}
+    .who{font-size:11px;color:#d1c8ff;margin-bottom:5px;font-weight:700}
+    .composer{position:sticky;bottom:0;padding:10px 0 max(10px,env(safe-area-inset-bottom));background:linear-gradient(transparent,#10101e 22%)}
+    form{display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:8px}
+    textarea{flex:1;resize:none;min-height:44px;max-height:150px;border:0;outline:0;background:transparent;color:var(--text);font:inherit;padding:10px}
+    button{border:0;border-radius:13px;background:var(--accent);color:#17152e;font-weight:800;padding:0 16px;cursor:pointer}
+    button:disabled{opacity:.5;cursor:wait}.hint{text-align:center;color:var(--muted);font-size:11px;margin:8px 0}
+    .error{color:#ffb8c0}.hidden{display:none}
+    @media(min-width:650px){.app{padding:22px}.welcome{padding-top:48px}.msg{max-width:78%}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="logo" aria-hidden="true">✦</div>
+      <div><h1>Nexa AI</h1><div class="sub">Un espacio amable para preguntar, crear y aprender ❤️</div></div>
+      <select class="lang" id="language" aria-label="Idioma de respuesta">
+        <option value="auto">Auto-detectar</option>
+        <option value="es">Español</option><option value="en">English</option>
+        <option value="pt">Português</option><option value="fr">Français</option>
+        <option value="de">Deutsch</option><option value="ar">العربية</option>
+        <option value="zh">中文</option><option value="ja">日本語</option>
+      </select>
+    </header>
+    <section class="welcome" id="welcome">
+      <div class="orb">♡</div>
+      <h2>Hola, aquí está Nexa.</h2>
+      <p>Cuéntame qué tienes en mente. Te responderé con amabilidad y sin juzgarte.</p>
+    </section>
+    <section class="messages" id="messages" aria-live="polite"></section>
+    <div class="composer">
+      <form id="chat-form">
+        <textarea id="prompt" rows="1" placeholder="Escribe tu mensaje..." aria-label="Escribe tu mensaje" maxlength="4000" required></textarea>
+        <button id="send" type="submit" aria-label="Enviar mensaje">➤</button>
+      </form>
+      <div class="hint" id="status">No compartas contraseñas ni datos privados. Nexa puede equivocarse.</div>
+    </div>
+  </main>
+  <script>
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#prompt");
+    const send = document.querySelector("#send");
+    const messagesEl = document.querySelector("#messages");
+    const statusEl = document.querySelector("#status");
+    const welcome = document.querySelector("#welcome");
+    const language = document.querySelector("#language");
+    const history = [];
+
+    function addMessage(role, content) {
+      welcome.classList.add("hidden");
+      const bubble = document.createElement("div");
+      bubble.className = "msg " + (role === "user" ? "user" : "assistant");
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = role === "user" ? "Tú" : "Nexa ❤️";
+      const body = document.createElement("div");
+      body.textContent = content;
+      bubble.append(who, body);
+      messagesEl.appendChild(bubble);
+      bubble.scrollIntoView({behavior:"smooth",block:"end"});
+      return body;
+    }
+
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight,150) + "px";
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text || send.disabled) return;
+      addMessage("user", text);
+      history.push({role:"user",content:text});
+      input.value = "";
+      input.style.height = "auto";
+      send.disabled = true;
+      statusEl.textContent = "Nexa está pensando…";
+      statusEl.classList.remove("error");
+      const replyNode = addMessage("assistant", "Dame un momento…");
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({messages: history.slice(-12), language: language.value})
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No pude conectar con la IA.");
+        replyNode.textContent = data.reply || "No recibí una respuesta. Inténtalo de nuevo.";
+        history.push({role:"assistant",content:replyNode.textContent});
+        statusEl.textContent = "Nexa puede equivocarse; verifica la información importante.";
+      } catch (error) {
+        replyNode.textContent = "Lo siento ❤️ No pude conectarme ahora. " + error.message;
+        history.pop();
+        statusEl.textContent = "Revisa la conexión o la configuración del servidor.";
+        statusEl.classList.add("error");
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
